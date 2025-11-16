@@ -379,6 +379,10 @@ VITE_ENABLE_DEV_MODE=false
 # 服务端口
 PORT=3000
 
+# 管理员登录凭据（重要：生产环境必须修改默认值）
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+
 # 数据库配置
 DB_PATH=./data/accounting.db
 
@@ -390,7 +394,38 @@ CORS_ORIGIN=http://your-server.com
 
 # 日志级别
 LOG_LEVEL=info
+
+# 备份配置（可选）
+BACKUP_FREQUENCY=daily  # daily, weekly, monthly
+BACKUP_PATH=./data/backups
 ```
+
+#### 环境变量配置步骤
+
+1. 在 `backend` 目录下，复制 `.env.example` 文件为 `.env` 文件：
+   ```bash
+   # Linux/Mac
+   cp .env.example .env
+   
+   # Windows
+   copy .env.example .env
+   ```
+
+2. 编辑 `.env` 文件，根据实际需要修改配置值，特别是管理员凭据部分：
+   ```dotenv
+   # 生产环境务必修改这些默认值
+   ADMIN_USERNAME=your_custom_username
+   ADMIN_PASSWORD=your_secure_password
+   ```
+
+3. 保存文件并重启后端服务使配置生效：
+   ```bash
+   cd backend
+   npm install  # 安装新增的dotenv依赖
+   npm start
+   ```
+
+> **安全提示**：确保 `.env` 文件已添加到 `.gitignore` 中，避免将敏感信息提交到版本控制系统。
 
 ### 注意事项
 

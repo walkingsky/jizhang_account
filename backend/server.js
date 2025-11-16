@@ -5,6 +5,8 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const schedule = require('node-schedule');
+// 加载环境变量
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -437,15 +439,15 @@ updateBackupSchedule();
 
 // API 路由
 
-// 登录路由 - 固定用户名密码
+// 登录路由 - 从环境变量读取用户名密码
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   
-  // 固定的用户名和密码
-  const FIXED_USERNAME = 'admin';
-  const FIXED_PASSWORD = 'admin123';
+  // 从环境变量读取用户名密码，设置默认值作为回退
+  const envUsername = process.env.ADMIN_USERNAME || 'admin';
+  const envPassword = process.env.ADMIN_PASSWORD || 'admin123';
   
-  if (username === FIXED_USERNAME && password === FIXED_PASSWORD) {
+  if (username === envUsername && password === envPassword) {
     res.json({ success: true, token: 'user_token' });
   } else {
     res.status(401).json({ success: false, message: '用户名或密码错误' });
