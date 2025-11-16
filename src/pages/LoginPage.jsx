@@ -10,9 +10,7 @@ const LoginPage = ({ onLogin }) => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   
-  // 固定的用户名和密码提示
-  const FIXED_USERNAME = 'admin'
-  const FIXED_PASSWORD = 'admin123'
+  // 登录凭据现在通过环境变量配置，默认值为admin/admin123
 
   const onFinish = async (values) => {
     const { username, password } = values
@@ -48,10 +46,14 @@ const LoginPage = ({ onLogin }) => {
   return (
     <div style={{
       minHeight: '100vh',
+      width: '100%',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      margin: 0,
+      padding: 0,
+      boxSizing: 'border-box'
     }}>
       <Card 
         style={{ 
@@ -104,9 +106,7 @@ const LoginPage = ({ onLogin }) => {
           </Item>
           
           <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <Paragraph style={{ color: '#999', marginBottom: 16 }}>
-              固定账户：admin / admin123
-            </Paragraph>
+                   
             <Space size="middle">
               <Button 
                 type="primary" 

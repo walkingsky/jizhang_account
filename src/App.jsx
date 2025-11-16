@@ -170,29 +170,35 @@ function App() {
             </>
           )}
           
-          <div className={`content ${isLoggedIn && !isMobile ? 'content-shifted' : ''}`}>
             <Routes>
+              {/* 登录页面使用特殊处理，不嵌套在content容器内，避免样式影响 */}
               <Route path="/login" element={
                 isLoggedIn ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />}
               />
-              <Route path="/" element={
-                isLoggedIn ? <HomePage /> : <Navigate to="/login" />}
-              />
-              <Route path="/records" element={
-                isLoggedIn ? <RecordsPage /> : <Navigate to="/login" />}
-              />
-              <Route path="/statistics" element={
-                isLoggedIn ? <StatisticsPage /> : <Navigate to="/login" />}
-              />
-              <Route path="/categories" element={
-                isLoggedIn ? <CategoryPage /> : <Navigate to="/login" />}
-              />
-              <Route path="/backup" element={
-                isLoggedIn ? <BackupPage /> : <Navigate to="/login" />}
-              />
-              <Route path="*" element={<NotFoundPage />} />
+              {/* 其他页面使用content容器 */}
+              <Route path="/*" element={
+                <div className={`content ${isLoggedIn && !isMobile ? 'content-shifted' : ''}`}>
+                  <Routes>
+                    <Route path="/" element={
+                      isLoggedIn ? <HomePage /> : <Navigate to="/login" />}
+                    />
+                    <Route path="/records" element={
+                      isLoggedIn ? <RecordsPage /> : <Navigate to="/login" />}
+                    />
+                    <Route path="/statistics" element={
+                      isLoggedIn ? <StatisticsPage /> : <Navigate to="/login" />}
+                    />
+                    <Route path="/categories" element={
+                      isLoggedIn ? <CategoryPage /> : <Navigate to="/login" />}
+                    />
+                    <Route path="/backup" element={
+                      isLoggedIn ? <BackupPage /> : <Navigate to="/login" />}
+                    />
+                    <Route path="*" element={<NotFoundPage />} />
+                  </Routes>
+                </div>
+              } />
             </Routes>
-          </div>
         </div>
       </Router>
     </ConfigProvider>
