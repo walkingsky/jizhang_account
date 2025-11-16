@@ -1,0 +1,26 @@
+[
+  {
+    "id": "2025-11-16T00-23-25-833Z",
+    "filename": "backup-2025-11-16T00-23-25-833Z.json",
+    "description": "定期自动备份",
+    "type": "auto",
+    "createdAt": "2025-11-16T00:23:25.833Z",
+    "size": 4197
+  },
+  {
+    "id": "2025-11-15T04-43-47-997Z",
+    "filename": "backup-2025-11-15T04-43-47-997Z.json",
+    "description": "手动备份 - 2025/11/15 12:43:47",
+    "type": "manual",
+    "createdAt": "2025-11-15T04:43:47.998Z",
+    "size": 2764
+  },
+  {
+    "id": "2025-11-14T23-55-54-317Z",
+    "filename": "backup-2025-11-14T23-55-54-317Z.json",
+    "description": "定期自动备份",
+    "type": "auto",
+    "createdAt": "2025-11-14T23:55:54.317Z",
+    "size": 2746
+  }
+]

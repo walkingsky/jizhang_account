@@ -1,0 +1,682 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { Card, Row, Col, DatePicker, Select, Button, Typography, Spin, message, Tabs, Table, Statistic } from 'antd'
+import { ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
+import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
+import { statisticsAPI } from '../services/apiService'
+import { handleError } from '../utils/optimizationUtils'
+import dayjs from 'dayjs'
+
+const { Title, Text } = Typography
+const { RangePicker } = DatePicker
+
+const StatisticsPage = () => {
+  const [activeTab, setActiveTab] = useState('month')
+  const [dateRange, setDateRange] = useState([dayjs().subtract(6, 'month'), dayjs()])
+  const [year, setYear] = useState(dayjs().year())
+  const [month, setMonth] = useState(dayjs().month() + 1)
+  const [loading, setLoading] = useState(false)
+  const [chartData, setChartData] = useState([])
+  const [pieData, setPieData] = useState([])
+  const [monthlyData, setMonthlyData] = useState([])
+  const [yearlySummary, setYearlySummary] = useState({})
+  const [dailyData, setDailyData] = useState([])
+  // 避免在初始化时直接使用window.innerWidth
+  const [windowWidth, setWindowWidth] = useState(0)
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+    }
+    
+    // 初始化窗口宽度
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  
+  // 响应式配置
+  const isMobile = useMemo(() => windowWidth < 768, [windowWidth])
+  const isTablet = useMemo(() => windowWidth >= 768 && windowWidth < 1024, [windowWidth])
+
+  // 颜色配置
+  const INCOME_COLOR = '#52c41a'
+  const EXPENSE_COLOR = '#ff4d4f'
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff8042']
+
+  // 获取月度统计数据 - 使用useCallback优化和缓存机制
+  // 使用字符串形式的日期作为依赖，避免dayjs对象引用变化导致的无限循环
+  const startDateStr = useMemo(() => dateRange[0].format('YYYY-MM-DD'), [dateRange])
+  const endDateStr = useMemo(() => dateRange[1].format('YYYY-MM-DD'), [dateRange])
+  
+  // dateRange变更时重新获取数据 - 只监听dateRange变化
+  useEffect(() => {
+    if (activeTab === 'month') {
+      fetchMonthlyStatistics()
+    }
+  }, [activeTab, dateRange])
+  
+  const fetchMonthlyStatistics = useCallback(async () => {
+    try {
+      setLoading(true)
+      
+      // 直接从服务器获取数据，不使用缓存
+      const data = await statisticsAPI.getPeriodStatistics(startDateStr, endDateStr)
+      
+      // 使用字符串重新创建日期对象，避免直接依赖dateRange
+      const startDate = dayjs(startDateStr)
+      const endDate = dayjs(endDateStr)
+      
+      // 处理图表数据
+      const chartItems = []
+      const current = startDate.clone() // 克隆日期对象避免修改原对象
+      const end = endDate
+      
+      while (current.isBefore(end) || current.isSame(end, 'month')) {
+        const monthStr = current.format('YYYY-MM')
+        const monthData = data.monthlyData?.find(d => d.month === monthStr)
+        
+        chartItems.push({
+          month: current.format('YYYY年MM月'),
+          income: monthData?.income || 0,
+          expense: monthData?.expense || 0,
+          balance: (monthData?.income || 0) - (monthData?.expense || 0)
+        })
+        
+        current.add(1, 'month')
+      }
+      
+      setChartData(chartItems)
+    } catch (error) {
+      const errorMsg = handleError(error, '获取月度统计失败')
+      message.error(errorMsg)
+      setChartData([])
+    } finally {
+      setLoading(false)
+    }
+  }, [startDateStr, endDateStr])
+
+  // 获取分类统计数据 - 使用useCallback优化和缓存机制
+  const yearMonthStr = useMemo(() => `${year}-${String(month).padStart(2, '0')}`, [year, month])
+  
+  const fetchCategoryStatistics = useCallback(async () => {
+    try {
+      setLoading(true)
+      
+      // 使用预格式化的年月字符串，避免在函数内部重复计算
+      const data = await statisticsAPI.getCategoryStatistics(yearMonthStr)
+      
+      // 处理饼图数据
+      const incomeData = (data.income || []).map((item, index) => ({
+        name: item.name,
+        value: item.amount,
+        color: COLORS[index % COLORS.length]
+      }))
+      
+      const expenseData = (data.expense || []).map((item, index) => ({
+        name: item.name,
+        value: item.amount,
+        color: COLORS[index % COLORS.length]
+      }))
+      
+      setPieData({ income: incomeData, expense: expenseData })
+    } catch (error) {
+      const errorMsg = handleError(error, '获取分类统计失败')
+      message.error(errorMsg)
+      setPieData({ income: [], expense: [] })
+    } finally {
+      setLoading(false)
+    }
+  }, [yearMonthStr])
+
+
+  // 获取年度汇总数据 - 使用useCallback优化和缓存机制
+  const fetchYearlySummary = useCallback(async () => {
+    try {
+      setLoading(true)
+      // 直接从服务器获取数据，不使用缓存
+      const data = await statisticsAPI.getYearlyStatistics(year)
+      setYearlySummary(data)
+      setMonthlyData(data.monthlyData || [])
+    } catch (error) {
+      const errorMsg = handleError(error, '获取年度汇总失败')
+      message.error(errorMsg)
+      setYearlySummary({})
+      setMonthlyData([])
+    } finally {
+      setLoading(false)
+    }
+  }, [year])
+
+  // 获取当月每日数据 - 使用useCallback优化和缓存机制
+  const fetchDailyData = useCallback(async () => {
+    try {
+      setLoading(true)
+      // 使用预格式化的年月字符串，避免在函数内部重复计算
+      const data = await statisticsAPI.getDailyStatistics(yearMonthStr)
+      setDailyData(data || [])
+    } catch (error) {
+      const errorMsg = handleError(error, '获取每日数据失败')
+      message.error(errorMsg)
+      setDailyData([])
+    } finally {
+      setLoading(false)
+    }
+  }, [yearMonthStr])
+
+  // Tab切换时获取数据 - 使用useCallback优化
+  const handleTabChange = useCallback((key) => {
+    setActiveTab(key)
+    
+    if (key === 'month') {
+      fetchMonthlyStatistics()
+    } else if (key === 'category') {
+      fetchCategoryStatistics()
+    } else if (key === 'year') {
+      fetchYearlySummary()
+    } else if (key === 'daily') {
+      fetchDailyData()
+    }
+  }, [fetchMonthlyStatistics, fetchCategoryStatistics, fetchYearlySummary, fetchDailyData])
+
+  // 组件挂载时获取数据 - 只在组件挂载时执行一次
+  useEffect(() => {
+    fetchMonthlyStatistics()
+  }, [])
+
+  // 年份或月份变化时更新数据
+  useEffect(() => {
+    if (activeTab === 'category' || activeTab === 'daily') {
+      if (activeTab === 'category') {
+        fetchCategoryStatistics()
+      } else {
+        fetchDailyData()
+      }
+    }
+  }, [fetchCategoryStatistics, fetchDailyData, year, month, activeTab])
+
+  // 年份变化时更新年度数据
+  useEffect(() => {
+    if (activeTab === 'year') {
+      fetchYearlySummary()
+    }
+  }, [fetchYearlySummary, year, activeTab])
+
+  // 月度图表渲染器 - 优化响应式设计
+  const renderMonthChart = useCallback(() => {
+    // 根据屏幕尺寸调整图表高度
+    const chartHeight = isMobile ? 300 : 400
+    
+    return (
+      <div className="chart-container">
+        <div className="chart-controls" style={{ marginBottom: 20 }}>
+          <Text strong>选择时间范围</Text>
+          <RangePicker 
+            value={dateRange}
+            onChange={(dates) => dates && setDateRange(dates)}
+            style={{ width: '100%', maxWidth: 320 }}
+            placeholder={['开始日期', '结束日期']}
+            size="middle"
+          />
+        </div>
+        
+        {loading ? (
+          <div className="loading-container">
+            <Spin size="large" tip="数据加载中..." />
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart
+              data={chartData}
+              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: isMobile ? 10 : 12 }}
+                interval={isMobile ? 'preserveStartEnd' : 0}
+              />
+              <YAxis />
+              <Tooltip formatter={(value) => [`${value.toFixed(2)} 元`, null]} />
+              <Legend verticalAlign="top" height={36} />
+              <Bar dataKey="income" name="收入" fill={INCOME_COLOR} />
+              <Bar dataKey="expense" name="支出" fill={EXPENSE_COLOR} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    )
+  }, [dateRange, chartData, loading])
+
+  // 分类图表渲染器 - 优化响应式设计和性能
+  const renderCategoryChart = useCallback(() => {
+    // 根据屏幕尺寸调整图表高度和配置
+    const chartHeight = isMobile ? 250 : 300
+    const outerRadius = isMobile ? 60 : 80
+    const labelFontSize = isMobile ? 10 : 12
+    
+    // 自定义标签渲染，适配移动端
+    const renderCustomLabel = (entry) => {
+      const { name, percent } = entry
+      const percentText = `${(percent * 100).toFixed(0)}%`
+      return (
+        <text 
+          x="50%" 
+          y="50%" 
+          textAnchor="middle" 
+          dominantBaseline="middle"
+          style={{ fontSize: labelFontSize }}
+        >
+          {name} {percentText}
+        </text>
+      )
+    }
+    
+    return (
+      <div className="chart-container">
+        <div className="chart-controls responsive-controls" style={{ marginBottom: 20 }}>
+          <Text strong>选择月份</Text>
+          <div className="select-group">
+            <Select 
+              value={year} 
+              style={{ width: 100, marginRight: 10 }}
+              onChange={setYear}
+              size="middle"
+            >
+              {[...Array(5)].map((_, i) => {
+                const y = dayjs().year() - 2 + i
+                return <Select.Option key={y} value={y}>{y}年</Select.Option>
+              })}
+            </Select>
+            <Select 
+              value={month} 
+              style={{ width: 100 }}
+              onChange={setMonth}
+              size="middle"
+            >
+              {[...Array(12)].map((_, i) => {
+                const m = i + 1
+                return <Select.Option key={m} value={m}>{m}月</Select.Option>
+              })}
+            </Select>
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="loading-container">
+            <Spin size="large" tip="数据加载中..." />
+          </div>
+        ) : (
+          <Row gutter={[16, 24]}>
+            <Col xs={24} sm={12} md={12}>
+              <Card title="收入分类统计" className="chart-card">
+                {pieData.income?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={chartHeight}>
+                    <PieChart>
+                      <Pie
+                        data={pieData.income}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomLabel}
+                        outerRadius={outerRadius}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieData.income.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => `${value.toFixed(2)} 元`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="empty-data">
+                    暂无收入数据
+                  </div>
+                )}
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={12}>
+              <Card title="支出分类统计" className="chart-card">
+                {pieData.expense?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={chartHeight}>
+                    <PieChart>
+                      <Pie
+                        data={pieData.expense}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomLabel}
+                        outerRadius={outerRadius}
+                        fill="#82ca9d"
+                        dataKey="value"
+                      >
+                        {pieData.expense.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => `${value.toFixed(2)} 元`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="empty-data">
+                    暂无支出数据
+                  </div>
+                )}
+              </Card>
+            </Col>
+          </Row>
+        )}
+      </div>
+    )
+  }, [year, month, pieData, loading])
+
+  // 使用useMemo优化表格列配置
+  const yearColumns = useMemo(() => [
+    {
+      title: '月份',
+      dataIndex: 'month',
+      key: 'month',
+      ellipsis: true,
+      responsive: ['sm']
+    },
+    {
+      title: '收入',
+      dataIndex: 'income',
+      key: 'income',
+      render: (value) => <span style={{ color: INCOME_COLOR }}>{value.toFixed(2)} 元</span>
+    },
+    {
+      title: '支出',
+      dataIndex: 'expense',
+      key: 'expense',
+      render: (value) => <span style={{ color: EXPENSE_COLOR }}>{value.toFixed(2)} 元</span>
+    },
+    {
+      title: '结余',
+      dataIndex: 'balance',
+      key: 'balance',
+      render: (value) => (
+        <span style={{ color: value >= 0 ? INCOME_COLOR : EXPENSE_COLOR }}>
+          {value.toFixed(2)} 元
+        </span>
+      )
+    }
+  ], [])
+
+  // 年度汇总渲染器 - 优化响应式设计
+  const renderYearlySummary = useCallback(() => {
+    return (
+      <div className="chart-container">
+        <div className="chart-controls" style={{ marginBottom: 20 }}>
+          <Text strong>选择年份</Text>
+          <Select 
+            value={year} 
+            style={{ width: 120 }}
+            onChange={setYear}
+            size="middle"
+          >
+            {[...Array(5)].map((_, i) => {
+              const y = dayjs().year() - 2 + i
+              return <Select.Option key={y} value={y}>{y}年</Select.Option>
+            })}
+          </Select>
+        </div>
+        
+        {loading ? (
+          <div className="loading-container">
+            <Spin size="large" tip="数据加载中..." />
+          </div>
+        ) : (
+          <>
+            <Row gutter={[16, 24]} style={{ marginBottom: 24 }}>
+              <Col xs={24} sm={12} md={8} className="stat-card">
+                <Card hoverable>
+                  <Statistic
+                    title={`${year}年总收入`}
+                    value={yearlySummary.totalIncome || 0}
+                    precision={2}
+                    valueStyle={{ color: INCOME_COLOR }}
+                    prefix={<ArrowUpOutlined />}
+                    suffix="元"
+                    valueProps={{ style: { fontSize: isMobile ? 18 : 24 } }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={8} className="stat-card">
+                <Card hoverable>
+                  <Statistic
+                    title={`${year}年总支出`}
+                    value={yearlySummary.totalExpense || 0}
+                    precision={2}
+                    valueStyle={{ color: EXPENSE_COLOR }}
+                    prefix={<ArrowDownOutlined />}
+                    suffix="元"
+                    valueProps={{ style: { fontSize: isMobile ? 18 : 24 } }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={8} className="stat-card">
+                <Card hoverable>
+                  <Statistic
+                    title={`${year}年结余`}
+                    value={yearlySummary.totalBalance || 0}
+                    precision={2}
+                    valueStyle={{ color: (yearlySummary.totalBalance || 0) >= 0 ? INCOME_COLOR : EXPENSE_COLOR }}
+                    suffix="元"
+                    valueProps={{ style: { fontSize: isMobile ? 18 : 24 } }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+            
+            <Card title={`${year}年月度明细`}>
+              <Table 
+                columns={yearColumns} 
+                dataSource={monthlyData} 
+                rowKey="month" 
+                pagination={false}
+                scroll={{ x: 'max-content' }}
+              />
+            </Card>
+          </>
+        )}
+      </div>
+    )
+  }, [year, yearlySummary, monthlyData, loading, INCOME_COLOR, EXPENSE_COLOR, yearColumns])
+
+  // 使用useMemo优化表格列配置
+  const dailyColumns = useMemo(() => [
+    {
+      title: '日期',
+      dataIndex: 'date',
+      key: 'date',
+      ellipsis: true,
+      responsive: ['sm']
+    },
+    {
+      title: '收入',
+      dataIndex: 'income',
+      key: 'income',
+      render: (value) => <span style={{ color: INCOME_COLOR }}>{value.toFixed(2)} 元</span>
+    },
+    {
+      title: '支出',
+      dataIndex: 'expense',
+      key: 'expense',
+      render: (value) => <span style={{ color: EXPENSE_COLOR }}>{value.toFixed(2)} 元</span>
+    },
+    {
+      title: '结余',
+      dataIndex: 'balance',
+      key: 'balance',
+      render: (value) => (
+        <span style={{ color: value >= 0 ? INCOME_COLOR : EXPENSE_COLOR }}>
+          {value.toFixed(2)} 元
+        </span>
+      )
+    }
+  ], [])
+
+  // 每日数据渲染器 - 优化响应式设计和性能
+  const renderDailyData = useCallback(() => {
+    // 动态调整分页大小
+    const pageSize = isMobile ? 10 : 31
+
+    return (
+      <div className="chart-container">
+        <div className="chart-controls responsive-controls" style={{ marginBottom: 20 }}>
+          <Text strong>选择月份</Text>
+          <div className="select-group">
+            <Select 
+              value={year} 
+              style={{ width: 100, marginRight: 10 }}
+              onChange={setYear}
+              size="middle"
+            >
+              {[...Array(5)].map((_, i) => {
+                const y = dayjs().year() - 2 + i
+                return <Select.Option key={y} value={y}>{y}年</Select.Option>
+              })}
+            </Select>
+            <Select 
+              value={month} 
+              style={{ width: 100 }}
+              onChange={setMonth}
+              size="middle"
+            >
+              {[...Array(12)].map((_, i) => {
+                const m = i + 1
+                return <Select.Option key={m} value={m}>{m}月</Select.Option>
+              })}
+            </Select>
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="loading-container">
+            <Spin size="large" tip="数据加载中..." />
+          </div>
+        ) : (
+          <Card title={`${year}年${month}月每日明细`}>
+            <Table 
+              columns={dailyColumns} 
+              dataSource={dailyData} 
+              rowKey="date" 
+              pagination={{
+                pageSize,
+                showSizeChanger: !isMobile,
+                showQuickJumper: !isMobile,
+                showTotal: (total) => `共 ${total} 条记录`
+              }}
+              scroll={{ x: 'max-content' }}
+              locale={{
+                emptyText: '暂无每日数据',
+                filterConfirm: '确定',
+                filterReset: '重置'
+              }}
+            />
+          </Card>
+        )}
+      </div>
+    )
+  }, [year, month, dailyData, loading, INCOME_COLOR, EXPENSE_COLOR, dailyColumns])
+
+  return (
+    <div className="page-container statistics-page">
+      <div className="page-header" style={{ marginBottom: 24 }}>
+        <Title level={4}>统计分析</Title>
+        <Text type="secondary">查看您的收支统计数据，包括月度趋势、分类分析、年度汇总等。</Text>
+      </div>
+
+      <Card className="statistics-card">
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={handleTabChange}
+          type={isMobile ? 'line' : 'card'}
+          size={isMobile ? 'small' : 'default'}
+        >
+          <Tabs.TabPane tab="月度趋势" key="month">
+            {renderMonthChart()}
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="分类分析" key="category">
+            {renderCategoryChart()}
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="年度汇总" key="year">
+            {renderYearlySummary()}
+          </Tabs.TabPane>
+          <Tabs.TabPane tab="每日明细" key="daily">
+            {renderDailyData()}
+          </Tabs.TabPane>
+        </Tabs>
+      </Card>
+
+      <style jsx="jsx">{`
+        .statistics-page {
+          padding: 0 16px;
+        }
+        .chart-container {
+          padding: 16px;
+        }
+        .chart-controls {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+        .responsive-controls {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .select-group {
+          display: flex;
+          gap: 10px;
+          width: 100%;
+          max-width: 220px;
+        }
+        .loading-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 300px;
+          text-align: center;
+        }
+        .empty-data {
+          text-align: center;
+          padding: 40px 0;
+          color: #999;
+        }
+        .chart-card {
+          height: 100%;
+        }
+        .stat-card {
+          margin-bottom: 16px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 575px) {
+          .statistics-page {
+            padding: 0 8px;
+          }
+          .chart-container {
+            padding: 12px;
+          }
+          .chart-controls {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+        }
+        
+        @media (min-width: 576px) and (max-width: 767px) {
+          .statistics-page {
+            padding: 0 12px;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+export default StatisticsPage

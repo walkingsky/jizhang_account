@@ -1,0 +1,138 @@
+{
+  "id": "2025-11-14T23-55-54-317Z",
+  "timestamp": "2025-11-14T23:55:54.317Z",
+  "description": "定期自动备份",
+  "type": "auto",
+  "records": [
+    {
+      "id": "1763100244545",
+      "date": "2025-09-01",
+      "type": "expense",
+      "category": "6",
+      "amount": 99,
+      "description": "",
+      "createdAt": "2025-11-14T06:04:04.545Z"
+    },
+    {
+      "id": "1",
+      "amount": 585,
+      "type": "expense",
+      "categoryId": "1",
+      "categoryName": "餐饮",
+      "categoryIcon": "🍽️",
+      "description": "午餐",
+      "date": "2025-11-13",
+      "createdAt": "2025-11-13T04:15:58.897Z",
+      "category": "1"
+    },
+    {
+      "id": "3",
+      "amount": 120,
+      "type": "expense",
+      "categoryId": "2",
+      "categoryName": "交通",
+      "categoryIcon": "🚗",
+      "description": "地铁月卡",
+      "date": "2025-11-12",
+      "createdAt": "2025-11-12T04:15:58.897Z",
+      "category": "2"
+    }
+  ],
+  "categories": [
+    {
+      "id": "1",
+      "name": "餐饮",
+      "type": "expense",
+      "icon": "🍽️"
+    },
+    {
+      "id": "2",
+      "name": "交通",
+      "type": "expense",
+      "icon": "🚗"
+    },
+    {
+      "id": "3",
+      "name": "购物",
+      "type": "expense",
+      "icon": "🛒"
+    },
+    {
+      "id": "4",
+      "name": "娱乐",
+      "type": "expense",
+      "icon": "🎬"
+    },
+    {
+      "id": "5",
+      "name": "医疗",
+      "type": "expense",
+      "icon": "🏥"
+    },
+    {
+      "id": "6",
+      "name": "教育",
+      "type": "expense",
+      "icon": "📚"
+    },
+    {
+      "id": "7",
+      "name": "住房",
+      "type": "expense",
+      "icon": "🏠"
+    },
+    {
+      "id": "8",
+      "name": "其他支出",
+      "type": "expense",
+      "icon": "📝"
+    },
+    {
+      "id": "9",
+      "name": "工资",
+      "type": "income",
+      "icon": "💼"
+    },
+    {
+      "id": "10",
+      "name": "奖金",
+      "type": "income",
+      "icon": "🎁"
+    },
+    {
+      "id": "11",
+      "name": "投资",
+      "type": "income",
+      "icon": "📈"
+    },
+    {
+      "id": "12",
+      "name": "副业",
+      "type": "income",
+      "icon": "💵"
+    },
+    {
+      "id": "13",
+      "name": "其他收入",
+      "type": "income",
+      "icon": "💰"
+    },
+    {
+      "id": "1763101904618",
+      "type": "expense",
+      "name": "高速费",
+      "updatedAt": "2025-11-14T12:10:36.512Z",
+      "createdAt": "2025-11-14T06:31:44.305Z",
+      "description": "车类"
+    },
+    {
+      "id": "1763102018059",
+      "type": "expense",
+      "name": "充电",
+      "updatedAt": "2025-11-14T12:16:49.248Z",
+      "createdAt": "2025-11-14T06:33:37.750Z",
+      "description": "车类"
+    }
+  ],
+  "version": "1.0"
+}

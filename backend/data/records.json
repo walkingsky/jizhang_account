@@ -1,0 +1,95 @@
+[
+  {
+    "id": "1763205101651",
+    "date": "2025-11-15",
+    "type": "expense",
+    "category": "6",
+    "amount": 1,
+    "description": "",
+    "createdAt": "2025-11-15T11:11:41.651Z",
+    "categoryId": "6",
+    "categoryName": "教育",
+    "categoryIcon": "📚"
+  },
+  {
+    "id": "1763185187172",
+    "date": "2025-11-15",
+    "type": "expense",
+    "category": "2",
+    "amount": 66,
+    "description": "",
+    "createdAt": "2025-11-15T05:39:47.172Z",
+    "categoryId": "2",
+    "categoryName": "交通",
+    "categoryIcon": "🚗"
+  },
+  {
+    "id": "1763184595825",
+    "date": "2025-10-09",
+    "type": "expense",
+    "category": "3",
+    "amount": 99.9,
+    "description": "",
+    "createdAt": "2025-11-15T05:29:55.825Z"
+  },
+  {
+    "id": "1763184506291",
+    "date": "2025-10-23",
+    "type": "expense",
+    "category": "4",
+    "amount": 66.61,
+    "description": "",
+    "createdAt": "2025-11-15T05:28:26.291Z"
+  },
+  {
+    "id": "1763182797755",
+    "date": "2025-11-15",
+    "type": "expense",
+    "category": "6",
+    "amount": 76.66,
+    "description": "",
+    "createdAt": "2025-11-15T04:59:57.755Z"
+  },
+  {
+    "id": "1763182723026",
+    "date": "2025-10-10",
+    "type": "expense",
+    "category": "7",
+    "amount": 789.67,
+    "description": "测试住房",
+    "createdAt": "2025-11-15T04:58:43.026Z"
+  },
+  {
+    "id": "1763100244545",
+    "date": "2025-09-01",
+    "type": "expense",
+    "category": "6",
+    "amount": 99,
+    "description": "",
+    "createdAt": "2025-11-14T06:04:04.545Z"
+  },
+  {
+    "id": "1",
+    "amount": 585,
+    "type": "expense",
+    "categoryId": "1",
+    "categoryName": "餐饮",
+    "categoryIcon": "🍽️",
+    "description": "午餐",
+    "date": "2025-11-13",
+    "createdAt": "2025-11-13T04:15:58.897Z",
+    "category": "1"
+  },
+  {
+    "id": "3",
+    "amount": 120,
+    "type": "expense",
+    "categoryId": "2",
+    "categoryName": "交通",
+    "categoryIcon": "🚗",
+    "description": "地铁月卡",
+    "date": "2025-11-12",
+    "createdAt": "2025-11-12T04:15:58.897Z",
+    "category": "2"
+  }
+]

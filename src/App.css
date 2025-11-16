@@ -1,0 +1,109 @@
+/* App.css */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* 已移除未使用的.main-content类，因为.content类现在直接设置了margin-top */
+
+.content {
+  flex: 1;
+  padding: 24px;
+  margin-top: 64px; /* 添加margin-top避开固定定位的header */
+  transition: all 0.3s;
+}
+
+.sidebar {
+  transition: all 0.3s;
+  height: calc(100vh - 64px);
+}
+
+/* 响应式设计 */
+@media (max-width: 576px) {
+  .content {
+    padding: 12px;
+    margin-left: 0;
+    margin-top: 56px; /* 移动端header高度较小，调整margin-top */
+  }
+  
+  .sidebar {
+    position: fixed;
+    z-index: 999;
+    left: -220px;
+    top: 64px;
+    height: calc(100vh - 64px);
+  }
+  
+  .sidebar.open {
+    left: 0;
+  }
+  
+  .content-shifted {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 16px;
+    margin-left: 0;
+    margin-top: 64px;
+  }
+  
+  .sidebar {
+    position: fixed;
+    z-index: 999;
+    left: -220px;
+    top: 64px;
+    height: calc(100vh - 64px);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .sidebar.open {
+    left: 0;
+  }
+  
+  .content-shifted {
+    margin-left: 0;
+  }
+}
+
+@media (min-width: 769px) {
+  .content {
+    margin-left: 220px;
+  }
+  
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 64px;
+  }
+}
+
+/* 移动端适配 */
+.mobile-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 48px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 遮罩层 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 998;
+  display: none;
+}
+
+.overlay.show {
+  display: block;
+}
