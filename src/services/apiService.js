@@ -35,9 +35,11 @@ axiosInstance.interceptors.request.use(
 // 响应拦截器
 axiosInstance.interceptors.response.use(
   response => {
-    return response
+    return response.data
   },
   error => {
+    console.error('API请求错误:', error)
+    
     // 统一错误处理
     if (error.response) {
       switch (error.response.status) {
@@ -46,9 +48,10 @@ axiosInstance.interceptors.response.use(
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           
-          // 跳转到登录页面
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
+          // 使用HashRouter模式跳转到登录页面
+          const currentPath = window.location.pathname + window.location.search;
+          if (currentPath !== '/' && !currentPath.includes('/login')) {
+            window.location.href = '/#/login';
           }
           break
         case 403:
@@ -67,6 +70,7 @@ axiosInstance.interceptors.response.use(
     } else if (error.request) {
       message.error('网络连接失败')
     }
+    
     return Promise.reject(error)
   }
 )
@@ -495,7 +499,8 @@ export const logout = () => {
   // 清除localStorage中的认证信息
   localStorage.removeItem('token')
   localStorage.removeItem('user')
-  // 可以在这里添加其他清理逻辑
+  // 使用HashRouter模式跳转到登录页面
+  window.location.href = '/#/login';
   return true
 }
 

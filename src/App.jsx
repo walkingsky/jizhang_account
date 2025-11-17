@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { Layout, ConfigProvider, Drawer, Button, Menu, message } from 'antd'
 import { MenuOutlined, HomeOutlined, FileTextOutlined, BarChartOutlined, DatabaseOutlined, AppstoreOutlined } from '@ant-design/icons'
 import LoginPage from './pages/LoginPage'

@@ -426,8 +426,24 @@ function updateBackupSchedule() {
     
     global.backupJob = schedule.scheduleJob(cronExpression, async () => {
       try {
-        console.log('执行自动备份...');
-        const result = createBackup('定期自动备份', 'auto');
+        console.log(`执行${settings.backupFrequency === 'weekly' ? '每周' : settings.backupFrequency === 'monthly' ? '每月' : '每日'}自动备份...`);
+        
+        // 根据备份频率设置不同的描述
+        let backupDescription;
+        switch (settings.backupFrequency) {
+          case 'weekly':
+            backupDescription = '每周定期自动备份';
+            break;
+          case 'monthly':
+            backupDescription = '每月定期自动备份';
+            break;
+          case 'daily':
+          default:
+            backupDescription = '每日定期自动备份';
+            break;
+        }
+        
+        const result = createBackup(backupDescription, 'auto');
         
         // 更新最后备份时间
         const updatedSettings = { ...settings, lastBackupTime: new Date().toISOString() };
@@ -439,7 +455,12 @@ function updateBackupSchedule() {
       }
     });
     
+    // 修改定期备份提示信息，确保与配置一致
+    const frequencyText = settings.backupFrequency === 'weekly' ? '每周日凌晨2点' : 
+                          settings.backupFrequency === 'monthly' ? '每月1日凌晨2点' : 
+                          '每天凌晨2点';
     console.log(`备份计划已设置: ${settings.backupFrequency}`);
+    console.log(`定期备份已设置: ${frequencyText}自动备份`);
   }
 }
 
