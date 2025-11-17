@@ -4,9 +4,18 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const schedule = require('node-schedule');
-// 加载环境变量
-require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const schedule = require('node-schedule'); // 暂时禁用自动备份功能
+
+// 尝试加载环境变量
+let dotenvLoaded = false;
+try {
+  require('dotenv').config();
+  dotenvLoaded = true;
+  console.log('环境变量加载成功');
+} catch (error) {
+  console.warn('警告: dotenv模块未找到，环境变量可能未加载');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -437,19 +446,83 @@ function updateBackupSchedule() {
 // 初始设置备份计划
 updateBackupSchedule();
 
+// JWT认证中间件
+const authenticateToken = (req, res, next) => {
+  // 从请求头获取token
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  // 如果没有token，返回401未授权
+  if (!token) {
+    return res.status(401).json({ success: false, message: '未提供认证token' });
+  }
+  
+  // 获取JWT密钥，如果没有设置则使用默认密钥
+  const jwtSecret = process.env.JWT_SECRET || 'your_secret_key';
+  
+  // 验证token
+  jwt.verify(token, jwtSecret, (err, user) => {
+    if (err) {
+      console.error('Token验证失败:', err.message);
+      return res.status(403).json({ success: false, message: '无效的token' });
+    }
+    
+    // 将用户信息添加到请求对象中
+    req.user = user;
+    next();
+  });
+};
+
 // API 路由
 
-// 登录路由 - 从环境变量读取用户名密码
+// 登录路由 - 不需要认证
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   
-  // 从环境变量读取用户名密码，设置默认值作为回退
-  const envUsername = process.env.ADMIN_USERNAME || 'admin';
-  const envPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  // 从环境变量读取用户名密码 - 不设置默认值
+  const envUsername = process.env.ADMIN_USERNAME;
+  const envPassword = process.env.ADMIN_PASSWORD;
   
+  // 验证环境变量是否存在
+  if (!envUsername || !envPassword) {
+    console.error('错误: 环境变量 ADMIN_USERNAME 或 ADMIN_PASSWORD 未设置');
+    return res.status(500).json({ success: false, message: '服务器配置错误' });
+  }
+  
+  // 严格验证用户名密码
   if (username === envUsername && password === envPassword) {
-    res.json({ success: true, token: 'user_token' });
+    // 获取JWT密钥，如果没有设置则使用默认密钥
+    const jwtSecret = process.env.JWT_SECRET || 'your_secret_key';
+    
+    // 创建JWT payload
+    const payload = {
+      username: username,
+      role: 'admin',
+      timestamp: Date.now()
+    };
+    
+    // 设置token过期时间（例如24小时）
+    const options = {
+      expiresIn: '24h'
+    };
+    
+    // 生成JWT token
+    jwt.sign(payload, jwtSecret, options, (err, token) => {
+      if (err) {
+        console.error('生成JWT token失败:', err);
+        return res.status(500).json({ success: false, message: '生成认证token失败' });
+      }
+      
+      // 返回token给客户端
+      res.json({ 
+        success: true, 
+        token: token,
+        username: username,
+        expiresIn: 86400 // 24小时，单位秒
+      });
+    });
   } else {
+    console.log('登录失败: 用户名或密码不匹配');
     res.status(401).json({ success: false, message: '用户名或密码错误' });
   }
 });
@@ -457,7 +530,7 @@ app.post('/api/login', (req, res) => {
 // 记录相关路由
 
 // 获取所有记录 - 支持筛选和排序
-app.get('/api/records', (req, res) => {
+app.get('/api/records', authenticateToken, (req, res) => {
   try {
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
     
@@ -531,7 +604,7 @@ app.get('/api/records', (req, res) => {
 });
 
 // 获取单条记录
-app.get('/api/records/:id', (req, res) => {
+app.get('/api/records/:id', authenticateToken, (req, res) => {
   try {
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
     const record = records.find(r => r.id === req.params.id);
@@ -547,7 +620,7 @@ app.get('/api/records/:id', (req, res) => {
 });
 
 // 创建记录
-app.post('/api/records', (req, res) => {
+app.post('/api/records', authenticateToken, (req, res) => {
   try {
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
     const categories = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
@@ -600,7 +673,7 @@ app.post('/api/records', (req, res) => {
 });
 
 // 更新记录
-app.put('/api/records/:id', (req, res) => {
+app.put('/api/records/:id', authenticateToken, (req, res) => {
   try {
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
     const index = records.findIndex(r => r.id === req.params.id);
@@ -618,7 +691,7 @@ app.put('/api/records/:id', (req, res) => {
 });
 
 // 删除记录
-app.delete('/api/records/:id', (req, res) => {
+app.delete('/api/records/:id', authenticateToken, (req, res) => {
   try {
     let records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
     records = records.filter(r => r.id !== req.params.id);
@@ -632,7 +705,7 @@ app.delete('/api/records/:id', (req, res) => {
 // 分类相关路由
 
 // 获取所有分类
-app.get('/api/categories', (req, res) => {
+app.get('/api/categories', authenticateToken, (req, res) => {
   try {
     const categories = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
     res.json(categories);
@@ -642,7 +715,7 @@ app.get('/api/categories', (req, res) => {
 });
 
 // 获取指定类型分类
-app.get('/api/categories/type/:type', (req, res) => {
+app.get('/api/categories/type/:type', authenticateToken, (req, res) => {
   try {
     const categories = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
     const filtered = categories.filter(c => c.type === req.params.type);
@@ -653,7 +726,7 @@ app.get('/api/categories/type/:type', (req, res) => {
 });
 
 // 创建分类
-app.post('/api/categories', (req, res) => {
+app.post('/api/categories', authenticateToken, (req, res) => {
   try {
     const categories = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
     const newCategory = {
@@ -670,7 +743,7 @@ app.post('/api/categories', (req, res) => {
 });
 
 // 更新分类
-app.put('/api/categories/:id', (req, res) => {
+app.put('/api/categories/:id', authenticateToken, (req, res) => {
   try {
     const categories = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
     const index = categories.findIndex(c => c.id === req.params.id);
@@ -703,7 +776,7 @@ app.put('/api/categories/:id', (req, res) => {
 });
 
 // 删除分类
-app.delete('/api/categories/:id', (req, res) => {
+app.delete('/api/categories/:id', authenticateToken, (req, res) => {
   try {
     // 检查是否有记录使用该分类
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
@@ -724,7 +797,7 @@ app.delete('/api/categories/:id', (req, res) => {
 });
 
 // 批量获取分类
-app.post('/api/categories/batch', (req, res) => {
+app.post('/api/categories/batch', authenticateToken, (req, res) => {
   try {
     const { ids } = req.body;
     const categories = JSON.parse(fs.readFileSync(CATEGORIES_FILE, 'utf8'));
@@ -743,7 +816,7 @@ app.post('/api/categories/batch', (req, res) => {
 // 统计相关路由
 
 // 获取总体统计
-app.get('/api/statistics/overall', (req, res) => {
+app.get('/api/statistics/overall', authenticateToken, (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
@@ -785,7 +858,7 @@ app.get('/api/statistics/overall', (req, res) => {
 });
 
 // 按分类统计
-app.get('/api/statistics/category', (req, res) => {
+app.get('/api/statistics/category', authenticateToken, (req, res) => {
   try {
     const { type, startDate, endDate } = req.query;
     
@@ -894,7 +967,7 @@ app.get('/api/statistics/category', (req, res) => {
 // 备份相关路由
 
 // 获取年度统计数据
-app.get('/api/statistics/year', (req, res) => {
+app.get('/api/statistics/year', authenticateToken, (req, res) => {
   try {
     const { year } = req.query;
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
@@ -964,7 +1037,7 @@ app.get('/api/statistics/year', (req, res) => {
 });
 
 // 获取日期范围内的每日统计数据
-app.get('/api/statistics/daily', (req, res) => {
+app.get('/api/statistics/daily', authenticateToken, (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
@@ -1028,7 +1101,7 @@ app.get('/api/statistics/daily', (req, res) => {
 });
 
 // 获取月度统计数据
-app.get('/api/statistics/month', (req, res) => {
+app.get('/api/statistics/month', authenticateToken, (req, res) => {
   try {
     const { month } = req.query;
     const records = JSON.parse(fs.readFileSync(RECORDS_FILE, 'utf8'));
@@ -1127,7 +1200,7 @@ app.get('/api/statistics/month', (req, res) => {
   }
 });
 
-app.post('/api/backups', (req, res) => {
+app.post('/api/backups', authenticateToken, (req, res) => {
   try {
     const { description } = req.body;
     const backupResult = createBackup(description || '', 'manual');
@@ -1157,7 +1230,7 @@ app.get('/api/backups', (req, res) => {
 });
 
 // 获取备份设置
-app.get('/api/settings/backup', (req, res) => {
+app.get('/api/settings/backup', authenticateToken, (req, res) => {
   try {
     const settings = getBackupSettings();
     res.json(settings);
@@ -1168,7 +1241,7 @@ app.get('/api/settings/backup', (req, res) => {
 });
 
 // 更新备份设置
-app.put('/api/settings/backup', (req, res) => {
+app.put('/api/settings/backup', authenticateToken, (req, res) => {
   try {
     const newSettings = req.body;
     
@@ -1196,7 +1269,7 @@ app.put('/api/settings/backup', (req, res) => {
 });
 
 // 恢复备份
-app.post('/api/backups/restore/:backupId', (req, res) => {
+app.post('/api/backups/restore/:backupId', authenticateToken, (req, res) => {
   try {
     const { backupId } = req.params;
     const restoreResult = restoreBackup(backupId);
@@ -1218,7 +1291,7 @@ app.post('/api/backups/restore/:backupId', (req, res) => {
 });
 
 // 删除备份
-app.delete('/api/backups/:backupId', (req, res) => {
+app.delete('/api/backups/:backupId', authenticateToken, (req, res) => {
   try {
     const { backupId } = req.params;
     const metadata = getBackupMetadata();
@@ -1247,7 +1320,7 @@ app.delete('/api/backups/:backupId', (req, res) => {
 });
 
 // 下载备份文件
-app.get('/api/backup/download/:filename', (req, res) => {
+app.get('/api/backup/download/:filename', authenticateToken, (req, res) => {
   try {
     const backupPath = path.join(BACKUP_DIR, req.params.filename);
     

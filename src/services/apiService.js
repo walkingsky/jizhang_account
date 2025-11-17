@@ -20,7 +20,11 @@ const axiosInstance = axios.create({
 // 请求拦截器
 axiosInstance.interceptors.request.use(
   config => {
-    // 可以在这里添加token等认证信息
+    // 从localStorage获取token并添加到请求头
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config
   },
   error => {
@@ -38,10 +42,18 @@ axiosInstance.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          // 未授权，可以跳转到登录页
+          // 未授权，清除token并跳转到登录页
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          
+          // 跳转到登录页面
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
           break
         case 403:
           message.error('没有权限访问')
+          console.error('没有权限访问该资源');
           break
         case 404:
           message.error('请求的资源不存在')
@@ -84,14 +96,7 @@ export const authAPI = {
   // 登录 - 暂时移除防抖，确保登录功能正常工作
   login: async (username, password) => {
     try {
-      // 对于演示环境，提供本地验证逻辑
-      if (username === 'admin' && password === 'admin123') {
-        const mockResponse = { success: true, token: 'mock-token-' + Date.now(), message: '登录成功' };
-        localStorage.setItem('token', mockResponse.token);
-        console.log('本地登录成功，返回:', mockResponse);
-        return mockResponse;
-      }
-      
+    
       const response = await request('/login', {
         method: 'POST',
         data: { username, password }
@@ -99,6 +104,8 @@ export const authAPI = {
       // 保存token到localStorage
       if (response && response.token) {
         localStorage.setItem('token', response.token);
+        // 同时保存用户信息
+        localStorage.setItem('user', JSON.stringify({ username: response.username || username }));
       }
       // 确保返回的对象包含success属性
       const result = (!response || typeof response !== 'object' || response.success === undefined) 
@@ -482,6 +489,15 @@ export const statisticsAPI = {
     }
   }
 };
+
+// 登出函数
+export const logout = () => {
+  // 清除localStorage中的认证信息
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  // 可以在这里添加其他清理逻辑
+  return true
+}
 
 // 备份相关API
 export const backupAPI = {
